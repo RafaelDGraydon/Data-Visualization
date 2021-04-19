@@ -17,6 +17,139 @@ In order to carry out the exercise we will take into account the following:
 ```bash
 npm install
 ```
+-We add the data provided by the following repository in the folder "./src/spain.json", where we will find the topojson information of Spain and the Canary Islands.
+https://github.com/deldersveld/topojson/blob/master/countries/spain/spain-comunidad-with-canary-islands.json
+-Then we add the initial and current status of the COVID by autonomous communities in the folder "./src/stats.ts":
+
+``` typescript
+export interface ResultEntry {
+  name: string;
+  value: number;
+}
+
+export const stats: ResultEntry[] = [
+  {
+    name: "Madrid",
+    value: 174,
+  },
+  {
+    name: "La Rioja",
+    value: 39,
+  },
+  {
+    name: "Andalusia",
+    value: 34,
+  },
+  {
+    name: "Catalonia",
+    value: 24,
+  },
+  {
+    name: "Valencia",
+    value: 30,
+  },
+  {
+    name: "Murcia",
+    value: 0,
+  },
+  {
+    name: "Extremadura",
+    value: 6,
+  },
+  {
+    name: "Castilla La Mancha",
+    value: 16,
+  },
+  {
+    name: "País Vasco",
+    value: 45,
+  },
+  {
+    name: "Cantabria",
+    value: 10,
+  },
+  {
+    name: "Asturias",
+    value: 5,
+  },
+  {
+    name: "Galicia",
+    value: 3,
+  },
+  {
+    name: "Aragón",
+    value: 11,
+  },
+  {
+    name: "Castilla y León",
+    value: 19,
+  },
+  {
+    name: "Canary Islands",
+    value: 18,
+  },
+  {
+    name: "Balearic Islands",
+    value: 6,
+  },
+];
+
+export const stats_1: ResultEntry[] = [
+  { 
+    name: "Andalusia", 
+    value: 212 },
+  { 
+    name: "Aragón", 
+    value: 223 },
+  { 
+    name: "Asturias",
+    value: 163 },
+  { 
+    name: "Baleares", 
+    value: 59 },
+  { 
+    name: "Canary Islands", value: 135 } 
+    value: 135 },
+  { 
+    name: "Cantabria", 
+    value: 168 },
+  { 
+    name: "Castilla La Mancha", 
+    value: 169 },
+  { 
+    name: "Castilla y León", 
+    value: 197 },
+  { 
+    name: "Catalonia", 
+    value: 213 },
+  { 
+    name: "Valencia", 
+    value: 36 },
+  { 
+    name: "Extremadura", 
+    value: 135 },
+  { 
+    name: "Galicia", 
+    value: 78 },
+  { 
+    name: "Madrid", 
+    value: 341},
+  { 
+    name: "Murcia", 
+    value: 69 },
+  { 
+    name: "Navarra", 
+    value: 426 },
+  { 
+    name: "Basque Country", 
+    value: 330 },
+  { 
+    name: "La Rioja", 
+    value: 211},
+];
+```
+
+-Finally, the latitude and longitude of the communities:
 
 ```typescript
 export const latLongCommunities = [
@@ -110,7 +243,7 @@ export const latLongCommunities = [
 
 -Once we have copied the information we need, we import it into our "index.ts" file.
 
-```diff
+```typescript
 import * as d3 from "d3";
 import { stat } from "fs";
 import * as topojson from "topojson-client";
@@ -120,14 +253,14 @@ import { stats, stats_1, ResultEntry } from "./stats";
 
 -Now we will import the data we have copied in "spain.json" as a variable called "spainjson" and another variable "d3Composite" to project in d3.
 
-```diff
+```typescript
 const spainjson = require("./spain.json");
 const d3Composite = require("d3-composite-projections");
 ```
 
 -After that we will create a variable where we will reduce our COVID cases to find the maximum number of affected people.
 
-```diff
+```typescript
 const maxAffected = stats.reduce(
   (max, item) => (item.value > max ? item.value : max),
   0
@@ -136,7 +269,7 @@ const maxAffected = stats.reduce(
 
 -A scale will then be made to calculate the radius size of the circles to be represented on the map.
 
-```diff
+```typescript
 const affectedRadiusScale = d3
   .scaleLinear()
   .domain([0, maxAffected])
@@ -145,7 +278,7 @@ const affectedRadiusScale = d3
 
 -We will create a function that will help us to represent the name of the communities but we will use it in the following tasks:
 
-```diff
+```typescript
  const calculateRadiusBasedOnAffectedCases = (
   community: string,
   dataset: ResultEntry[]
@@ -160,7 +293,7 @@ const affectedRadiusScale = d3
 
 -We will start building the background where we will load our map:
 
-```diff
+```typescript
 const svg = d3
   .select("body")
   .append("svg")
@@ -171,7 +304,7 @@ const svg = d3
 
 -Followed by the map projection, with a scale for the size of the map we are going to represent and the position manually so that it is as centred as possible:
 
-```diff
+```typescript
 const aProjection = d3Composite
   .geoConicConformalSpain()
   .scale(3300)
@@ -180,14 +313,14 @@ const aProjection = d3Composite
 
 -And we finish with the projection of the map with the information gathered from the topojson:
 
-```diff
+```typescript
 const geoPath = d3.geoPath().projection(aProjection);
 const geojson = topojson.feature(spainjson, spainjson.objects.ESP_adm1);
 ```
 
 -First we create the body where we will display the data to represent the country and communities:
 
-```diff
+```typescript
 svg
   .selectAll("path")
   .data(geojson["features"])
@@ -199,7 +332,7 @@ svg
 
 -Second we create the circles that we will represent them in the country created in the previous code, in this case I have been helped by the laboratory professor David Cuesta, since he advised me that for each time that I loaded the map and each time I was going to load the circles, these were removed so that there were no problems at the time of loading them:
 
-```diff
+```typescript
 const updateChart = (data: ResultEntry[]) => {
   svg.selectAll("circle").remove();
   svg
@@ -216,7 +349,7 @@ const updateChart = (data: ResultEntry[]) => {
 
 -We would finish this task by creating the buttons that are requested in the statement. To do this, we must first create these buttons in the html file "index.html":
 
-```diff
+```typescript
   <div>
         <button id="Init">InitlyCovid</button>
         <button id="Currently">CurrentlyCovid</button>
@@ -225,7 +358,7 @@ const updateChart = (data: ResultEntry[]) => {
 
 -And we would display them on our map as follows:
 
-```diff
+```typescript
 document
   .getElementById("Init")
   .addEventListener("click", function ResultsInitCovid() {
