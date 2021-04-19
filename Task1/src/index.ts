@@ -1,10 +1,13 @@
 import * as d3 from "d3";
 import { stat } from "fs";
 import * as topojson from "topojson-client";
-const spainjson = require("./spain.json");
-const d3Composite = require("d3-composite-projections");
+
 import { latLongCommunities } from "./communities";
 import { stats, stats_1, ResultEntry } from "./stats";
+
+const spainjson = require("./spain.json");
+const d3Composite = require("d3-composite-projections");
+
 const maxAffected = stats.reduce(
   (max, item) => (item.value > max ? item.value : max),
   0

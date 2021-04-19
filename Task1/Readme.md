@@ -1,128 +1,24 @@
-# Pinning locations + scale
+# Coronavirus evolution by autonomous community
 
-Our boss liked a lot the map we have developed, now he wants to focus on Spain affection by City, he wants to
-display a map pinning affected locations and scaling that pin according the number of cases affected, something like:
+In this task we are going to make a comparison of the evolution of the coronavirus by autonomous communities in Spain. To do this, we will show a map showing the localities affected by the virus with a circle and scaling it according to the number of people affected:
 
 ![map affected coronavirus](./content/chart.png "affected coronavirus")
 
 codesandbox: https://codesandbox.io/s/hopeful-ellis-rlczx
 
-We have to face three challenges here:
+In order to carry out the exercise we will take into account the following:
 
-- Place pins on a map based on location.
-- Scale pin radius based on affected number.
-- Spain got canary island that is a territory placed far away, we need to cropt that islands and paste them in a visible
-  place in the map.
+- We will take as a starting point the example made in class, where we will have the map of Spain, together with the Canary Islands.
+- We will place some pins in the shape of a circle and we will scale it to represent the effect caused by the COVID in each community.
+- We will place two buttons to check the difference between the initial COVID data and the current data.
 
 # Steps
 
-- We will take as starting example _00-render-map-hover_, let's copy the content from that folder and execute _npm install_.
+- We will start by running the example made in class with the name "02-pin-location-scale" by copying the file and once started in Visual Studio Code, we will run "npm install".
 
 ```bash
 npm install
 ```
-
-- This time we will Spain topojson info: https://github.com/deldersveld/topojson/blob/master/countries/spain/spain-comunidad-with-canary-islands.json
-
-Let's copy it under the following route _./src/spain.json_
-
-- Now instead of importing _europe.json_ we will import _spain.json_.
-
-_./src/index.ts_
-
-```diff
-import * as d3 from "d3";
-import * as topojson from "topojson-client";
-- const europejson = require("./europe.json");
-+ const spainjson = require("./spain.json");
-```
-
-- Let's build the spain map in stenad of europe:
-
-_./src/index.ts_
-
-```diff
-const geojson = topojson.feature(
-+  spainjson,
--  europejson,
-+  spainjson.objects.ESP_adm1
--  europejson.objects.continent_Europe_subunits
-);
-```
-
-> How do we know that we have to use _spainjson.objects.ESP_adm1_ just by examining
-> the _spain.json_ file and by debugging and inspecting what's inside _spainjson_ object?
-
-- If we run the project, we will get some bitter-sweet feelings, we can see a map of spain,
-  but it's too smal, and on the other hand, canary islands are shown far away (that's normal,
-  but usually in maps these islands are relocated).
-
-- Let's start by adding the right size to be displayed in our screen.
-
-_./src/index.ts_
-
-```diff
-const aProjection = d3
-  .geoMercator()
-  // Let's make the map bigger to fit in our resolution
--  .scale(500)
-+  .scale(2000)
-  // Let's center the map
--  .translate([300, 900])
-+  .translate([650, 1800]);
-```
-
-- If we run the project we can check that the map is now renders in a proper size and position, let's
-  go for the next challenge, we want to reposition Canary Islands, in order to do that we can build a
-  map projection that positions that piece of land in another place, for instance for the USA you can
-  find Albers USA projection: https://bl.ocks.org/mbostock/2869946, there's a great project created by
-  [Roger Veciana](https://github.com/rveciana) that implements a lot of projections for several
-  maps:
-
-  - [Project site](https://geoexamples.com/d3-composite-projections/)
-  - [Github project](https://github.com/rveciana/d3-composite-projections)
-
-Let's install the library that contains this projections:
-
-```bash
-npm install d3-composite-projections --save
-```
-
-- Let's import it in our _index.ts_ (we will use require since we don't have typings).
-
-```diff
-import * as d3 from "d3";
-import * as topojson from "topojson-client";
-const spainjson = require("./spain.json");
-+ const d3Composite = require("d3-composite-projections");
-```
-
-- Let's change the projection we are using (we will need to tweak as well the
-  _scale_ and _translate_ values):
-
-_./src/index.ts_
-
-```diff
-const aProjection =
--   d3
--  .geoMercator()
-+  d3Composite
-+  .geoConicConformalSpain()
-  // Let's make the map bigger to fit in our resolution
--  .scale(2000)
-+  .scale(3300)
-  // Let's center the map
--  .translate([600, 2000]);
-+  .translate([500, 400]);
-```
-
-- If we run the project, voila ! we got the map just the way we want it.
-
-- Now we want to display a circle in the middle of each community (comunidad autónoma),
-  we have collected the latitude and longitude for each community, let's add them to our
-  project.
-
-_./src/communities.ts_
 
 ```typescript
 export const latLongCommunities = [
@@ -214,219 +110,84 @@ export const latLongCommunities = [
 ];
 ```
 
-- Let's import it:
-
-_./src/index.ts_
+-Once we have copied the information we need, we import it into our "index.ts" file.
 
 ```diff
 import * as d3 from "d3";
+import { stat } from "fs";
 import * as topojson from "topojson-client";
-+ import { latLongCommunities } from "./communities";
+import { latLongCommunities } from "./communities";
+import { stats, stats_1, ResultEntry } from "./stats";
 ```
 
-- And let's append at the bottom of the _index_ file a
-  code to render a circle on top of each community:
-
-_./src/index.ts_
-
-```typescript
-svg
-  .selectAll("circle")
-  .data(latLongCommunities)
-  .enter()
-  .append("circle")
-  .attr("r", 15)
-  .attr("cx", (d) => aProjection([d.long, d.lat])[0])
-  .attr("cy", (d) => aProjection([d.long, d.lat])[1]);
-```
-
-- Nice ! we got an spot on top of each community, now is time to
-  make this spot size relative to the number of affected cases per community.
-
-- We will add the stats that we need to display (affected persons per community):
-
-_./stats.ts_
-
-```typescript
-export const stats = [
-  {
-    name: "Madrid",
-    value: 174,
-  },
-  {
-    name: "La Rioja",
-    value: 39,
-  },
-  {
-    name: "Andalucía",
-    value: 34,
-  },
-  {
-    name: "Cataluña",
-    value: 24,
-  },
-  {
-    name: "Valencia",
-    value: 30,
-  },
-  {
-    name: "Murcia",
-    value: 0,
-  },
-  {
-    name: "Extremadura",
-    value: 6,
-  },
-  {
-    name: "Castilla La Mancha",
-    value: 16,
-  },
-  {
-    name: "País Vasco",
-    value: 45,
-  },
-  {
-    name: "Cantabria",
-    value: 10,
-  },
-  {
-    name: "Asturias",
-    value: 5,
-  },
-  {
-    name: "Galicia",
-    value: 3,
-  },
-  {
-    name: "Aragón",
-    value: 11,
-  },
-  {
-    name: "Castilla y León",
-    value: 19,
-  },
-  {
-    name: "Islas Canarias",
-    value: 18,
-  },
-  {
-    name: "Islas Baleares",
-    value: 6,
-  },
-];
-```
-
-- Let's import it into our index.ts
-
-_./src/index.ts_
+-Now we will import the data we have copied in "spain.json" as a variable called "spainjson" and another variable "d3Composite" to project in d3.
 
 ```diff
-import * as d3 from "d3";
-import * as topojson from "topojson-client";
 const spainjson = require("./spain.json");
 const d3Composite = require("d3-composite-projections");
-import { latLongCommunities } from "./communities";
-+ import { stats } from "./stats";
 ```
 
-- Let's calculate the maximum number of affected of all communities:
+-After that we will create a variable where we will reduce our COVID cases to find the maximum number of affected people.
 
-_./src/index.ts_
-
-```typescript
+```diff
 const maxAffected = stats.reduce(
   (max, item) => (item.value > max ? item.value : max),
   0
 );
 ```
 
-- Let's create an scale to map affected to radius size.
+-A scale will then be made to calculate the radius size of the circles to be represented on the map.
 
-_./src/index.ts_
-
-```typescript
+```diff
 const affectedRadiusScale = d3
   .scaleLinear()
   .domain([0, maxAffected])
-  .range([0, 50]); // 50 pixel max radius, we could calculate it relative to width and height
+  .range([10, 30]);
 ```
 
-- Let's create a helper function to glue the community name with the affected cases.
+-We will create a function that will help us to represent the name of the communities but we will use it in the following tasks:
 
-_./src/index.ts_
-
-```typescript
-const calculateRadiusBasedOnAffectedCases = (comunidad: string) => {
-  const entry = stats.find((item) => item.name === comunidad);
+```diff
+ const calculateRadiusBasedOnAffectedCases = (
+  community: string,
+  dataset: ResultEntry[]
+) => {
+  const entry = dataset.find((item) => item.name === community);
 
   return entry ? affectedRadiusScale(entry.value) : 0;
 };
 ```
 
-- Let's tie it up with the circle rendering code that we created above:
+-Finally, we will create the variables to be able to build our environment where we will show our design.
 
-_./src/index.ts_
-
-```diff
-svg
-  .selectAll("circle")
-  .data(latLongCommunities)
-  .enter()
-  .append("circle")
--  .attr("r", 15)
-+  .attr("r", d => calculateRadiusBasedOnAffectedCases(d.name))
-  .attr("cx", d => aProjection([d.long, d.lat])[0])
-  .attr("cy", d => aProjection([d.long, d.lat])[1]);
-```
-
-- If we run the example we can check that know circles are shonw in the right size.
-
-- Black circles are ugly let's add some styles, we will just use a red background and
-  add some transparency to let the user see the spot and the map under that spot.
-
-_./src/map.css_
+-We will start building the background where we will load our map:
 
 ```diff
-.country {
-  stroke-width: 1;
-  stroke: #2f4858;
-  fill: #008c86;
-}
-
-.selected-country {
-  stroke-width: 1;
-  stroke: #bc5b40;
-  fill: #f88f70;
-}
-
-+ .affected-marker {
-+  stroke-width: 1;
-+  stroke: #bc5b40;
-+  fill: #f88f70;
-+  fill-opacity: 0.7;
-+ }
+const svg = d3
+  .select("body")
+  .append("svg")
+  .attr("width", 1024)
+  .attr("height", 800)
+  .attr("style", "background-color: #FBFAF0");
 ```
 
-- Let's apply this style to the black circles that we are rendering:
-
-_./src/index.ts_
+-Followed by the map projection, with a scale for the size of the map we are going to represent and the position manually so that it is as centred as possible:
 
 ```diff
-svg
-  .selectAll("circle")
-  .data(latLongCommunities)
-  .enter()
-  .append("circle")
-+  .attr("class", "affected-marker")
-  .attr("r", d => calculateRadiusBasedOnAffectedCases(d.name))
-  .attr("cx", d => aProjection([d.long, d.lat])[0])
-  .attr("cy", d => aProjection([d.long, d.lat])[1]);
+const aProjection = d3Composite
+  .geoConicConformalSpain()
+  .scale(3300)
+  .translate([500, 400]);
 ```
 
-- Just to wrap up let's remove features that we are not using for this chart
-  (highlight a given community on mouse hover).
+-And we finish with the projection of the map with the information gathered from the topojson:
 
-_./src/index.ts_
+```diff
+const geoPath = d3.geoPath().projection(aProjection);
+const geojson = topojson.feature(spainjson, spainjson.objects.ESP_adm1);
+```
+
+-First we create the body where we will display the data to represent the country and communities:
 
 ```diff
 svg
@@ -435,45 +196,55 @@ svg
   .enter()
   .append("path")
   .attr("class", "country")
-  // data loaded from json file
-  .attr("d", geoPath as any)
--  .on("mouseover", function(d, i) {
--    d3.select(this).attr("class", "selected-country");
--  })
--  .on("mouseout", function(d, i) {
--    d3.select(this).attr("class", "country");
--  });
+  .attr("d", geoPath as any);
 ```
 
-./src/map.css
+-Second we create the circles that we will represent them in the country created in the previous code, in this case I have been helped by the laboratory professor David Cuesta, since he advised me that for each time that I loaded the map and each time I was going to load the circles, these were removed so that there were no problems at the time of loading them:
 
 ```diff
-.country {
-  stroke-width: 1;
-  stroke: #2f4858;
-  fill: #008c86;
-}
-
-- .selected-country {
--  stroke-width: 1;
--  stroke: #bc5b40;
--  fill: #f88f70;
-- }
-
-.affected-marker {
-  stroke-width: 1;
-  stroke: #bc5b40;
-  fill: #f88f70;
-  fill-opacity: 0.7;
-}
+const updateChart = (data: ResultEntry[]) => {
+  svg.selectAll("circle").remove();
+  svg
+    .selectAll("circle")
+    .data(latLongCommunities)
+    .enter()
+    .append("circle")
+    .attr("class", "affected-marker")
+    .attr("r", (d) => calculateRadiusBasedOnAffectedCases(d.name, data))
+    .attr("cx", (d) => aProjection([d.long, d.lat])[0])
+    .attr("cy", (d) => aProjection([d.long, d.lat])[1]);
+};
 ```
 
-# About Basefactor + Lemoncode
+-We would finish this task by creating the buttons that are requested in the statement. To do this, we must first create these buttons in the html file "index.html":
 
-We are an innovating team of Javascript experts, passionate about turning your ideas into robust products.
+```diff
+  <div>
+        <button id="Init">InitlyCovid</button>
+        <button id="Currently">CurrentlyCovid</button>
+  </div>
+```
 
-[Basefactor, consultancy by Lemoncode](http://www.basefactor.com) provides consultancy and coaching services.
+-And we would display them on our map as follows:
 
-[Lemoncode](http://lemoncode.net/services/en/#en-home) provides training services.
+```diff
+document
+  .getElementById("Init")
+  .addEventListener("click", function ResultsInitCovid() {
+    updateChart(stats);
+  });
 
-For the LATAM/Spanish audience we are running an Online Front End Master degree, more info: http://lemoncode.net/master-frontend
+document
+  .getElementById("Currently")
+  .addEventListener("click", function ResultsCurrentlyCovid() {
+    updateChart(stats_1);
+  });
+```
+
+-To see the final result, run the code:
+
+```bash
+npm start
+```
+
+where we load the map in the path "localhost:1234".
