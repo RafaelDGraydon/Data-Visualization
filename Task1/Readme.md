@@ -2,9 +2,7 @@
 
 In this task we are going to make a comparison of the evolution of the coronavirus by autonomous communities in Spain. To do this, we will show a map showing the localities affected by the virus with a circle and scaling it according to the number of people affected:
 
-![map affected coronavirus](./content/chart.png "affected coronavirus")
-
-codesandbox: https://codesandbox.io/s/hopeful-ellis-rlczx
+![map affected coronavirus](./content/spain.png)
 
 In order to carry out the exercise we will take into account the following:
 
